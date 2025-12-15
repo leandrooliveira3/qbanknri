@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: "generateSW",
       registerType: "autoUpdate",
 
       includeAssets: [
@@ -24,63 +25,14 @@ export default defineConfig({
         background_color: "#ffffff",
         theme_color: "#0f172a",
         icons: [
-          {
-            src: "/icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "/icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
         ],
       },
 
       workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
         navigateFallback: "/index.html",
-
-        runtimeCaching: [
-          // HTML / navegação
-          {
-            urlPattern: ({ request }) => request.destination === "document",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "pages-cache",
-            },
-          },
-
-          // JS, CSS, imagens
-          {
-            urlPattern: ({ request }) =>
-              ["script", "style", "image", "font"].includes(
-                request.destination
-              ),
-            handler: "CacheFirst",
-            options: {
-              cacheName: "assets-cache",
-              expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 dias
-              },
-            },
-          },
-
-          // API (GET apenas)
-          {
-            urlPattern: ({ url }) =>
-              url.pathname.startsWith("/rest") ||
-              url.pathname.startsWith("/api"),
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              networkTimeoutSeconds: 5,
-              expiration: {
-                maxEntries: 100,
-              },
-            },
-          },
-        ],
       },
     }),
   ],
