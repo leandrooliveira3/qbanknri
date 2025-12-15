@@ -7,7 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileText, Check, AlertCircle } from 'lucide-react';
 import { Question, NeuroCategory } from '@/types/question';
 import { useToast } from '@/hooks/use-toast';
-import { useCategories } from '@/hooks/useCategories';
+import useCategories from '@/hooks/useCategories';
+
 
 interface ImportQuestionsProps {
   onImportQuestions: (questions: Omit<Question, 'id' | 'createdAt'>[]) => void;
