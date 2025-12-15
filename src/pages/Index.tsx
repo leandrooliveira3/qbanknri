@@ -1,5 +1,11 @@
 import React, { useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+{!navigator.onLine && (
+  <div className="bg-yellow-100 text-yellow-900 text-sm px-4 py-2 text-center">
+    Modo offline: usando dados salvos no dispositivo
+  </div>
+)}
+
 import { AppSidebar } from "@/components/AppSidebar";
 
 import { Dashboard } from "@/components/Dashboard";
