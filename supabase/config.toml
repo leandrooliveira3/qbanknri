@@ -1,0 +1,4 @@
+project_id = "phuqoagoadmgpilcwwom"
+
+[functions.generate-daily-review]
+verify_jwt = true
