@@ -1,9 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from "@/lib/supabaseClient";
 import { Question } from "@/types/question";
 
 /**
- * Busca todas as questões do usuário logado
+ * 🔑 Mapeia dados crus do Supabase → modelo do frontend
+ */
+const mapQuestion = (q: any): Question => ({
+  id: q.id,
+  categoria: q.categoria,
+  subcategoria: q.subcategoria ?? "",
+  enunciado: q.enunciado,
+  alternativas: Array.isArray(q.alternativas) ? q.alternativas : [],
+  gabarito: q.gabarito,
+  comentario: q.comentario,
+  dificuldade: q.dificuldade,
+  tags: Array.isArray(q.tags) ? q.tags : [],
+  fonte: q.fonte ?? "",
+  imagem: Array.isArray(q.imagem) ? q.imagem : [],
+  comentarioImagem: Array.isArray(q.comentarioImagem) ? q.comentarioImagem : [],
+  referencias: Array.isArray(q.referencias) ? q.referencias : [],
+  isFavorite: q.is_favorite ?? false,
+
+  // 🔥 PONTO CRÍTICO
+  createdAt: q.created_at ? new Date(q.created_at) : new Date(),
+});
+
+/**
+ * Busca todas as questões
  */
 const fetchQuestions = async (): Promise<Question[]> => {
   const { data, error } = await supabase
@@ -16,7 +39,7 @@ const fetchQuestions = async (): Promise<Question[]> => {
     throw error;
   }
 
-  return data ?? [];
+  return (data ?? []).map(mapQuestion);
 };
 
 export function useQuestions() {
@@ -33,20 +56,27 @@ export function useQuestions() {
   } = useQuery({
     queryKey: ["questions"],
     queryFn: fetchQuestions,
-    enabled: isOnline,      // 🔑 não tenta fetch offline
-    staleTime: Infinity,    // 🔑 confia no cache
+    enabled: isOnline,
+    staleTime: Infinity,
   });
 
   const addQuestion = useMutation({
-    mutationFn: async (question: Omit<Question, "id" | "created_at">) => {
+    mutationFn: async (
+      question: Omit<Question, "id" | "createdAt">
+    ) => {
+      const payload = {
+        ...question,
+        created_at: new Date().toISOString(),
+      };
+
       const { data, error } = await supabase
         .from("questions")
-        .insert(question)
+        .insert(payload)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return mapQuestion(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
@@ -61,15 +91,22 @@ export function useQuestions() {
       id: string;
       updates: Partial<Question>;
     }) => {
+      const { createdAt, ...rest } = updates;
+
+      const payload = {
+        ...rest,
+        ...(createdAt && { created_at: createdAt.toISOString() }),
+      };
+
       const { data, error } = await supabase
         .from("questions")
-        .update(updates)
+        .update(payload)
         .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return mapQuestion(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
@@ -93,11 +130,14 @@ export function useQuestions() {
 
   return {
     questions,
-    isLoading,
+    loading: isLoading,
     isFetching,
     error,
     addQuestion: addQuestion.mutateAsync,
-    updateQuestion: updateQuestion.mutateAsync,
+    updateQuestion: (id: string, updates: Partial<Question>) =>
+      updateQuestion.mutateAsync({ id, updates }),
     deleteQuestion: deleteQuestion.mutateAsync,
+    refetch: () =>
+      queryClient.invalidateQueries({ queryKey: ["questions"] }),
   };
 }
