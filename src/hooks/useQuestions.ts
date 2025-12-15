@@ -2,26 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Question } from "@/types/question";
 
-/* ===================== MAPPER ===================== */
-const mapQuestion = (q: any): Question => ({
-  id: q.id,
-  categoria: q.categoria,
-  subcategoria: q.subcategoria ?? "",
-  enunciado: q.enunciado,
-  alternativas: Array.isArray(q.alternativas) ? q.alternativas : [],
-  gabarito: q.gabarito,
-  comentario: q.comentario,
-  dificuldade: q.dificuldade,
-  tags: Array.isArray(q.tags) ? q.tags : [],
-  fonte: q.fonte ?? "",
-  imagem: Array.isArray(q.imagem) ? q.imagem : [],
-  comentarioImagem: Array.isArray(q.comentarioImagem) ? q.comentarioImagem : [],
-  referencias: Array.isArray(q.referencias) ? q.referencias : [],
-  isFavorite: q.is_favorite ?? false,
-  createdAt: q.created_at ? new Date(q.created_at) : new Date(),
-});
+/* ================= FETCH ================= */
 
-/* ===================== FETCH ===================== */
 const fetchQuestions = async (): Promise<Question[]> => {
   const { data, error } = await supabase
     .from("questions")
@@ -29,8 +11,14 @@ const fetchQuestions = async (): Promise<Question[]> => {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data ?? []).map(mapQuestion);
+
+  return (data ?? []).map((q) => ({
+    ...q,
+    createdAt: q.created_at ? new Date(q.created_at) : new Date(),
+  }));
 };
+
+/* ================= HOOK ================= */
 
 export function useQuestions() {
   const queryClient = useQueryClient();
@@ -46,12 +34,24 @@ export function useQuestions() {
     staleTime: Infinity,
   });
 
-  /* ===================== ADD SINGLE ===================== */
+  /* ================= ADD ================= */
+
   const addQuestion = useMutation({
-    mutationFn: async (question: Omit<Question, "id" | "createdAt">) => {
+    mutationFn: async (
+      question: Omit<Question, "id" | "createdAt">
+    ) => {
       const payload = {
-        ...question,
-        created_at: new Date().toISOString(),
+        categoria: question.categoria,
+        subcategoria: question.subcategoria ?? null,
+        enunciado: question.enunciado,
+        alternativas: question.alternativas, // jsonb
+        gabarito: question.gabarito,
+        comentario: question.comentario,
+        dificuldade: question.dificuldade,
+        tags: question.tags ?? [],
+        fonte: question.fonte ?? null,
+        imagem: question.imagem ?? [],
+        comentarioImagem: question.comentarioImagem ?? [],
       };
 
       const { data, error } = await supabase
@@ -61,37 +61,47 @@ export function useQuestions() {
         .single();
 
       if (error) throw error;
-      return mapQuestion(data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
     },
   });
 
-  /* ===================== IMPORT BATCH (🔥 FALTAVA ISSO) ===================== */
+  /* ================= IMPORT ================= */
+
   const importQuestions = useMutation({
     mutationFn: async (
       questions: Omit<Question, "id" | "createdAt">[]
     ) => {
-      const payload = questions.map(q => ({
-        ...q,
-        created_at: new Date().toISOString(),
+      const payload = questions.map((q) => ({
+        categoria: q.categoria,
+        subcategoria: q.subcategoria ?? null,
+        enunciado: q.enunciado,
+        alternativas: q.alternativas,
+        gabarito: q.gabarito,
+        comentario: q.comentario,
+        dificuldade: q.dificuldade,
+        tags: q.tags ?? [],
+        fonte: q.fonte ?? null,
+        imagem: q.imagem ?? [],
+        comentarioImagem: q.comentarioImagem ?? [],
       }));
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("questions")
-        .insert(payload)
-        .select();
+        .insert(payload);
 
       if (error) throw error;
-      return (data ?? []).map(mapQuestion);
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
     },
   });
 
-  /* ===================== UPDATE ===================== */
+  /* ================= UPDATE ================= */
+
   const updateQuestion = useMutation({
     mutationFn: async ({
       id,
@@ -100,29 +110,25 @@ export function useQuestions() {
       id: string;
       updates: Partial<Question>;
     }) => {
-      const { createdAt, ...rest } = updates;
-
-      const payload = {
-        ...rest,
-        ...(createdAt && { created_at: createdAt.toISOString() }),
-      };
+      const { createdAt, ...clean } = updates;
 
       const { data, error } = await supabase
         .from("questions")
-        .update(payload)
+        .update(clean)
         .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
-      return mapQuestion(data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
     },
   });
 
-  /* ===================== DELETE ===================== */
+  /* ================= DELETE ================= */
+
   const deleteQuestion = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -144,9 +150,8 @@ export function useQuestions() {
     isFetching,
     error,
     addQuestion: addQuestion.mutateAsync,
-    importQuestions: importQuestions.mutateAsync, // ✅ AGORA EXISTE
-    updateQuestion: (id: string, updates: Partial<Question>) =>
-      updateQuestion.mutateAsync({ id, updates }),
+    importQuestions: importQuestions.mutateAsync,
+    updateQuestion: updateQuestion.mutateAsync,
     deleteQuestion: deleteQuestion.mutateAsync,
     refetch: () =>
       queryClient.invalidateQueries({ queryKey: ["questions"] }),
