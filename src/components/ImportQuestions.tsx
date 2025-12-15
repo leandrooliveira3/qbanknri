@@ -10,7 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useCategories } from '@/hooks/useCategories';
 
 interface ImportQuestionsProps {
-  onImportQuestions: (questions: Omit<Question, 'id' | 'createdAt'>[]) => void;
+  onImportQuestions: (
+    questions: Omit<Question, 'id' | 'created_at'>[]
+  ) => Promise<void>;
   onCancel?: () => void;
 }
 
@@ -35,41 +37,40 @@ export const ImportQuestions: React.FC<ImportQuestionsProps> = ({
     reader.readAsText(file);
   };
 
-  const validateQuestion = (question: any): boolean => {
+  const validateQuestion = (q: any): boolean => {
     try {
-      const required = ['categoria', 'enunciado', 'alternativas', 'gabarito', 'comentario', 'dificuldade'];
+      const required = [
+        'categoria',
+        'enunciado',
+        'alternativas',
+        'gabarito',
+        'comentario',
+        'dificuldade'
+      ];
+
       const validDifficulties = ['Fácil', 'Médio', 'Difícil'];
       const validGabaritos = ['A', 'B', 'C', 'D', 'E'];
 
-      if (!question || typeof question !== 'object') return false;
+      if (!q || typeof q !== 'object') return false;
 
-      const hasRequiredFields = required.every(field => {
-        const value = question[field];
-        return value !== undefined && value !== null && value.toString().trim() !== '';
-      });
+      if (!required.every(f => q[f] !== undefined && q[f]?.toString().trim())) {
+        return false;
+      }
 
-      const hasValidAlternatives =
-        Array.isArray(question.alternativas) &&
-        question.alternativas.length >= 4 &&
-        question.alternativas.length <= 5 &&
-        question.alternativas.every((alt: any) => alt?.toString().trim() !== '');
+      if (
+        !Array.isArray(q.alternativas) ||
+        q.alternativas.length < 4 ||
+        q.alternativas.length > 5 ||
+        q.alternativas.some((a: any) => !a?.toString().trim())
+      ) {
+        return false;
+      }
 
-      const hasValidCategory =
-        typeof question.categoria === 'string' &&
-        question.categoria.trim().length > 0;
+      if (!validDifficulties.includes(q.dificuldade?.trim())) return false;
+      if (!validGabaritos.includes(q.gabarito?.toString().trim().toUpperCase()))
+        return false;
 
-      const hasValidDifficulty = validDifficulties.includes(question.dificuldade?.trim());
-      const hasValidGabarito = validGabaritos.includes(
-        question.gabarito?.toString().trim().toUpperCase()
-      );
-
-      return (
-        hasRequiredFields &&
-        hasValidAlternatives &&
-        hasValidCategory &&
-        hasValidDifficulty &&
-        hasValidGabarito
-      );
+      return true;
     } catch {
       return false;
     }
@@ -82,26 +83,24 @@ export const ImportQuestions: React.FC<ImportQuestionsProps> = ({
     for (let i = 0; i < questions.length; i += batchSize) {
       const batch = questions.slice(i, i + batchSize);
 
-      const validBatch = batch.filter((q) => {
-        const isValid = validateQuestion(q);
-        if (isValid && q.categoria) {
-          newCategories.add(q.categoria.trim());
-        }
-        return isValid;
+      const validBatch = batch.filter(q => {
+        const ok = validateQuestion(q);
+        if (ok && q.categoria) newCategories.add(q.categoria.trim());
+        return ok;
       });
 
-      if (validBatch.length > 0) {
-        onImportQuestions(validBatch);
+      if (validBatch.length) {
+        await onImportQuestions(validBatch);
         results.push(...validBatch);
       }
 
       if (i + batchSize < questions.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(r => setTimeout(r, 100));
       }
     }
 
-    for (const categoria of newCategories) {
-      await addCustomCategory(categoria);
+    for (const cat of newCategories) {
+      await addCustomCategory(cat);
     }
 
     return results;
@@ -111,7 +110,7 @@ export const ImportQuestions: React.FC<ImportQuestionsProps> = ({
     if (!jsonData.trim()) {
       toast({
         title: 'Erro',
-        description: 'Insira os dados JSON ou carregue um arquivo',
+        description: 'Insira um JSON válido',
         variant: 'destructive'
       });
       return;
@@ -120,56 +119,48 @@ export const ImportQuestions: React.FC<ImportQuestionsProps> = ({
     setIsProcessing(true);
 
     try {
-      const data = JSON.parse(jsonData);
-      const questionsArray = Array.isArray(data) ? data : [data];
+      const parsed = JSON.parse(jsonData);
+      const questions = Array.isArray(parsed) ? parsed : [parsed];
 
       const validQuestions =
-        questionsArray.length > 100
-          ? await processBatch(questionsArray)
+        questions.length > 100
+          ? await processBatch(questions)
           : (() => {
-              const newCategories = new Set<string>();
-              const valid = questionsArray.filter(q => {
-                const isValid = validateQuestion(q);
-                if (isValid && q.categoria) {
-                  newCategories.add(q.categoria.trim());
-                }
-                return isValid;
+              const cats = new Set<string>();
+              const valid = questions.filter(q => {
+                const ok = validateQuestion(q);
+                if (ok && q.categoria) cats.add(q.categoria.trim());
+                return ok;
               });
 
-              newCategories.forEach(c => addCustomCategory(c));
+              cats.forEach(c => addCustomCategory(c));
               return valid;
             })();
 
-      const invalidCount = questionsArray.length - validQuestions.length;
-
-      if (validQuestions.length === 0) {
+      if (!validQuestions.length) {
         toast({
           title: 'Erro',
-          description: 'Nenhuma questão válida encontrada no arquivo.',
+          description: 'Nenhuma questão válida encontrada',
           variant: 'destructive'
         });
-        setIsProcessing(false);
         return;
       }
 
-      if (questionsArray.length <= 100) {
-        onImportQuestions(validQuestions);
+      if (questions.length <= 100) {
+        await onImportQuestions(validQuestions);
       }
 
       toast({
         title: 'Sucesso',
-        description: `${validQuestions.length} questões importadas com sucesso${
-          invalidCount > 0 ? `. ${invalidCount} inválidas ignoradas` : ''
-        }`
+        description: `${validQuestions.length} questões importadas com sucesso`
       });
 
       setJsonData('');
-    } catch (error) {
+    } catch (e) {
       toast({
         title: 'Erro',
-        description: `Erro durante a importação: ${
-          error instanceof Error ? error.message : 'JSON inválido'
-        }`,
+        description:
+          e instanceof Error ? e.message : 'JSON inválido',
         variant: 'destructive'
       });
     } finally {
@@ -180,7 +171,7 @@ export const ImportQuestions: React.FC<ImportQuestionsProps> = ({
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-medical flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
           Importar Questões em Bloco
         </CardTitle>
@@ -190,18 +181,18 @@ export const ImportQuestions: React.FC<ImportQuestionsProps> = ({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Importe questões em JSON. Categorias novas serão criadas automaticamente.
+            Importação via JSON. Categorias novas são criadas automaticamente.
           </AlertDescription>
         </Alert>
 
         <div>
           <Label>Arquivo JSON</Label>
           <input
+            id="file-upload"
             type="file"
             accept=".json"
             onChange={handleFileUpload}
             className="hidden"
-            id="file-upload"
           />
           <Label
             htmlFor="file-upload"
@@ -216,7 +207,7 @@ export const ImportQuestions: React.FC<ImportQuestionsProps> = ({
           <Label>Ou cole o JSON</Label>
           <Textarea
             value={jsonData}
-            onChange={(e) => setJsonData(e.target.value)}
+            onChange={e => setJsonData(e.target.value)}
             className="min-h-[200px] font-mono text-sm"
           />
         </div>
