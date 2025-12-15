@@ -25,7 +25,12 @@ import {
   StickyNote,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const menuItems = [
   { title: "Agenda", url: "dashboard", icon: Home },
@@ -54,7 +59,7 @@ export function AppSidebar({
   questionsCount,
   userEmail,
 }: AppSidebarProps) {
-  const { state } = useSidebar();
+  const { state, setOpen } = useSidebar();
   const { theme, setTheme } = useTheme();
 
   const isCollapsed = state === "collapsed";
@@ -63,7 +68,6 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarContent className="bg-sidebar flex flex-col">
-
         {/* Header / Logo */}
         <div className="p-4 flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center">
@@ -86,7 +90,14 @@ export function AppSidebar({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <SidebarMenuButton
-                          onClick={() => onTabChange(item.url)}
+                          onClick={() => {
+                            onTabChange(item.url);
+
+                            // Fecha automaticamente no mobile / TWA
+                            if (window.innerWidth < 768) {
+                              setOpen(false);
+                            }
+                          }}
                           className={`
                             w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
                             ${
@@ -153,7 +164,6 @@ export function AppSidebar({
             )}
           </div>
         </div>
-
       </SidebarContent>
     </Sidebar>
   );
