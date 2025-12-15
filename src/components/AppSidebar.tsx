@@ -6,31 +6,27 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  Brain,
+  Home,
   FileText,
+  Heart,
+  StickyNote,
+  Layers,
   Plus,
   Upload,
-  BarChart3,
-  Home,
-  Heart,
-  ClipboardList,
   GraduationCap,
+  ClipboardList,
+  BarChart3,
   Sparkles,
+  Brain,
   Moon,
   Sun,
-  Layers,
-  StickyNote,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const menuItems = [
   { title: "Agenda", url: "dashboard", icon: Home },
@@ -50,70 +46,59 @@ interface AppSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   questionsCount: number;
-  userEmail?: string;
 }
 
 export function AppSidebar({
   activeTab,
   onTabChange,
   questionsCount,
-  userEmail,
 }: AppSidebarProps) {
   const { state, setOpen } = useSidebar();
   const { theme, setTheme } = useTheme();
 
   const isCollapsed = state === "collapsed";
-  const isActive = (tab: string) => activeTab === tab;
+  const isMobile = window.innerWidth < 768;
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
+    <Sidebar collapsible="offcanvas" className="border-r">
       <SidebarContent className="bg-sidebar flex flex-col">
-        {/* Header / Logo */}
+        {/* HEADER */}
         <div className="p-4 flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center">
-            <Brain className="h-6 w-6 text-sidebar-foreground" />
-          </div>
+          <SidebarTrigger className="p-2 rounded-lg hover:bg-sidebar-accent">
+            <Brain className="h-6 w-6" />
+          </SidebarTrigger>
           {!isCollapsed && (
-            <span className="text-lg font-bold text-sidebar-foreground">
-              NeuroQBank
-            </span>
+            <span className="text-lg font-bold">NeuroQBank</span>
           )}
         </div>
 
-        {/* Navigation */}
-        <SidebarGroup className="flex-1 px-2 py-4">
+        {/* MENU */}
+        <SidebarGroup className="flex-1 px-2 py-2">
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
+            <SidebarMenu>
               <TooltipProvider delayDuration={0}>
                 {menuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.url}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <SidebarMenuButton
                           onClick={() => {
                             onTabChange(item.url);
 
-                            // Fecha automaticamente no mobile / TWA
-                            if (window.innerWidth < 768) {
+                            // 🔴 FECHA SEMPRE NO MOBILE / PWA / TWA
+                            if (isMobile) {
                               setOpen(false);
                             }
                           }}
-                          className={`
-                            w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
-                            ${
-                              isActive(item.url)
-                                ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                            }
-                          `}
+                          className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
+                            activeTab === item.url
+                              ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                              : "hover:bg-sidebar-accent"
+                          }`}
                         >
-                          <item.icon
-                            className={`h-5 w-5 shrink-0 ${
-                              isCollapsed ? "mx-auto" : ""
-                            }`}
-                          />
+                          <item.icon className="h-5 w-5" />
                           {!isCollapsed && (
-                            <span className="text-sm font-medium truncate">
+                            <span className="truncate">
                               {item.title}
                               {item.url === "questions" &&
                                 ` (${questionsCount})`}
@@ -123,13 +108,8 @@ export function AppSidebar({
                       </TooltipTrigger>
 
                       {isCollapsed && (
-                        <TooltipContent
-                          side="right"
-                          className="bg-sidebar-accent text-sidebar-foreground border-sidebar-border"
-                        >
+                        <TooltipContent side="right">
                           {item.title}
-                          {item.url === "questions" &&
-                            ` (${questionsCount})`}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -140,29 +120,21 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={() =>
-                setTheme(theme === "dark" ? "light" : "dark")
-              }
-              className="p-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-              title={theme === "dark" ? "Modo claro" : "Modo escuro"}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </button>
-
-            {!isCollapsed && (
-              <span className="text-xs text-sidebar-foreground/50">
-                v2.0
-              </span>
+        {/* FOOTER */}
+        <div className="p-4 border-t">
+          <button
+            onClick={() =>
+              setTheme(theme === "dark" ? "light" : "dark")
+            }
+            className="flex items-center gap-2 text-sm opacity-70 hover:opacity-100"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
             )}
-          </div>
+            {!isCollapsed && "Tema"}
+          </button>
         </div>
       </SidebarContent>
     </Sidebar>
