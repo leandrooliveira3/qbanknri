@@ -89,10 +89,9 @@ export const ImportQuestions: React.FC<ImportQuestionsProps> = ({
         return ok;
       });
 
-      if (validBatch.length) {
-        await onImportQuestions(validBatch);
-        results.push(...validBatch);
-      }
+if (validBatch.length) {
+  results.push(...validBatch);
+}
 
       if (i + batchSize < questions.length) {
         await new Promise(r => setTimeout(r, 100));
