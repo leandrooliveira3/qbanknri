@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.qbanknri",
+      "sha256_cert_fingerprints": [
+        "9A:9E:EE:FA:4F:5C:05:5D:99:FC:0D:69:19:A8:41:E9:5D:EA:01:1C:AA:A6:20:4E:92:DE:8D:30:83:A5:9D:D6"
+      ]
+    }
+  }
+]
