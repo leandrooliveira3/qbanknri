@@ -9,7 +9,7 @@ import { Search, Edit, Heart, Trash2, BookOpen } from 'lucide-react';
 import { useFavorites } from '@/hooks/useFavorites';
 import { RichText } from './RichText';
 import { CommentWithImage } from './CommentWithImage';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { LoadingSkeleton } from './LoadingSkeleton';
 
 interface FavoriteQuestionsProps {
