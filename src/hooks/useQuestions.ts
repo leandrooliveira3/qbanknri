@@ -2,9 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Question } from "@/types/question";
 
-/**
- * 🔑 Mapeia dados crus do Supabase → modelo do frontend
- */
+/* ===================== MAPPER ===================== */
 const mapQuestion = (q: any): Question => ({
   id: q.id,
   categoria: q.categoria,
@@ -20,33 +18,22 @@ const mapQuestion = (q: any): Question => ({
   comentarioImagem: Array.isArray(q.comentarioImagem) ? q.comentarioImagem : [],
   referencias: Array.isArray(q.referencias) ? q.referencias : [],
   isFavorite: q.is_favorite ?? false,
-
-  // 🔥 PONTO CRÍTICO
   createdAt: q.created_at ? new Date(q.created_at) : new Date(),
 });
 
-/**
- * Busca todas as questões
- */
+/* ===================== FETCH ===================== */
 const fetchQuestions = async (): Promise<Question[]> => {
   const { data, error } = await supabase
     .from("questions")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("Erro ao buscar questões:", error);
-    throw error;
-  }
-
+  if (error) throw error;
   return (data ?? []).map(mapQuestion);
 };
 
 export function useQuestions() {
   const queryClient = useQueryClient();
-
-  const isOnline =
-    typeof navigator !== "undefined" && navigator.onLine;
 
   const {
     data: questions = [],
@@ -56,14 +43,12 @@ export function useQuestions() {
   } = useQuery({
     queryKey: ["questions"],
     queryFn: fetchQuestions,
-    enabled: isOnline,
     staleTime: Infinity,
   });
 
+  /* ===================== ADD SINGLE ===================== */
   const addQuestion = useMutation({
-    mutationFn: async (
-      question: Omit<Question, "id" | "createdAt">
-    ) => {
+    mutationFn: async (question: Omit<Question, "id" | "createdAt">) => {
       const payload = {
         ...question,
         created_at: new Date().toISOString(),
@@ -83,6 +68,30 @@ export function useQuestions() {
     },
   });
 
+  /* ===================== IMPORT BATCH (🔥 FALTAVA ISSO) ===================== */
+  const importQuestions = useMutation({
+    mutationFn: async (
+      questions: Omit<Question, "id" | "createdAt">[]
+    ) => {
+      const payload = questions.map(q => ({
+        ...q,
+        created_at: new Date().toISOString(),
+      }));
+
+      const { data, error } = await supabase
+        .from("questions")
+        .insert(payload)
+        .select();
+
+      if (error) throw error;
+      return (data ?? []).map(mapQuestion);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+    },
+  });
+
+  /* ===================== UPDATE ===================== */
   const updateQuestion = useMutation({
     mutationFn: async ({
       id,
@@ -113,6 +122,7 @@ export function useQuestions() {
     },
   });
 
+  /* ===================== DELETE ===================== */
   const deleteQuestion = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -134,6 +144,7 @@ export function useQuestions() {
     isFetching,
     error,
     addQuestion: addQuestion.mutateAsync,
+    importQuestions: importQuestions.mutateAsync, // ✅ AGORA EXISTE
     updateQuestion: (id: string, updates: Partial<Question>) =>
       updateQuestion.mutateAsync({ id, updates }),
     deleteQuestion: deleteQuestion.mutateAsync,
