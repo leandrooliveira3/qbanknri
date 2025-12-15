@@ -11,7 +11,7 @@ import { useStatistics } from '@/hooks/useStatistics';
 import { useCategories } from '@/hooks/useCategories';
 import { useDailyReview } from '@/hooks/useDailyReview';
 import { Calendar } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeSelectorPopover } from '@/components/ThemeSelectorPopover';
 
