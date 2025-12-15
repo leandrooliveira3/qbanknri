@@ -1,0 +1,491 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Professional Theme - Light Mode */
+    --background: 210 20% 98%; /* Very light gray */
+    --foreground: 220 20% 20%; /* Dark slate */
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 20%;
+
+    --primary: 220 50% 45%; /* Muted professional blue */
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 220 50% 38%;
+
+    --secondary: 220 15% 95%;
+    --secondary-foreground: 220 20% 25%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 50%;
+
+    --accent: 180 30% 40%; /* Muted teal */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 55% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 40% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 60% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 200 50% 45%;
+    --info-foreground: 0 0% 100%;
+
+    --medical: 220 50% 45%;
+    --medical-light: 220 40% 80%;
+    --medical-dark: 220 50% 38%;
+    --medical-foreground: 0 0% 100%;
+
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 220 50% 45%;
+    
+    --radius: 0.375rem;
+
+    /* Sidebar colors - Professional dark */
+    --sidebar-background: 220 20% 18%;
+    --sidebar-foreground: 220 15% 90%;
+    --sidebar-primary: 220 50% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 25%;
+    --sidebar-accent-foreground: 220 15% 90%;
+    --sidebar-border: 220 20% 15%;
+    --sidebar-ring: 220 50% 55%;
+  }
+
+  .dark {
+    --background: 220 20% 10%;
+    --foreground: 220 15% 90%;
+
+    --card: 220 20% 13%;
+    --card-foreground: 220 15% 90%;
+
+    --popover: 220 20% 13%;
+    --popover-foreground: 220 15% 90%;
+
+    --primary: 220 50% 55%;
+    --primary-foreground: 220 20% 10%;
+    --primary-dark: 220 50% 45%;
+
+    --secondary: 220 20% 20%;
+    --secondary-foreground: 220 15% 90%;
+
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 12% 55%;
+
+    --accent: 180 30% 45%;
+    --accent-foreground: 220 20% 10%;
+
+    --destructive: 0 55% 55%;
+    --destructive-foreground: 220 20% 10%;
+
+    --success: 160 40% 45%;
+    --success-foreground: 220 20% 10%;
+
+    --warning: 35 60% 55%;
+    --warning-foreground: 220 20% 10%;
+
+    --info: 200 50% 50%;
+    --info-foreground: 220 20% 10%;
+
+    --medical: 220 50% 55%;
+    --medical-light: 220 40% 70%;
+    --medical-dark: 220 50% 45%;
+    --medical-foreground: 220 20% 10%;
+
+    --border: 220 20% 22%;
+    --input: 220 20% 22%;
+    --ring: 220 50% 55%;
+
+    --sidebar-background: 220 20% 12%;
+    --sidebar-foreground: 220 15% 92%;
+    --sidebar-primary: 220 50% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 18%;
+    --sidebar-accent-foreground: 220 15% 92%;
+    --sidebar-border: 220 20% 10%;
+    --sidebar-ring: 220 50% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Cards clean */
+  .professional-card {
+    @apply bg-card border border-border rounded-lg shadow-sm;
+  }
+  
+  .professional-card-header {
+    @apply p-5 border-b border-border;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-150 hover:shadow-md;
+  }
+  
+  /* Botões simples */
+  .btn-primary-gradient {
+    @apply rounded-md px-4 py-2 font-medium text-primary-foreground bg-primary;
+    @apply transition-colors duration-150 hover:bg-primary/90;
+  }
+  
+  .btn-success-gradient {
+    @apply rounded-md px-4 py-2 font-medium text-success-foreground bg-success;
+    @apply transition-colors duration-150 hover:bg-success/90;
+  }
+  
+  /* Status badges */
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium;
+  }
+  
+  .status-success {
+    @apply bg-success/10 text-success;
+  }
+  
+  .status-warning {
+    @apply bg-warning/10 text-warning;
+  }
+  
+  .status-info {
+    @apply bg-info/10 text-info;
+  }
+
+  /* Strikethrough para alternativas eliminadas */
+  .alternative-strikethrough {
+    @apply relative;
+  }
+  
+  .alternative-strikethrough::after {
+    content: '';
+    @apply absolute left-0 right-0 top-1/2 h-0.5 bg-destructive/60;
+    transform: translateY(-50%);
+  }
+
+  /* Split view para desktop */
+  .split-view-container {
+    @apply grid gap-6;
+  }
+  
+  @media (min-width: 1024px) {
+    .split-view-container {
+      @apply grid-cols-2;
+    }
+  }
+}
+
+/* Custom breakpoint for extra small screens */
+@media (min-width: 480px) {
+  .xs\:inline {
+    display: inline !important;
+  }
+}
+
+/* Mobile-first responsive adjustments */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  /* Melhor responsividade para cards */
+  .card {
+    margin: 0;
+    border-radius: 0.75rem;
+  }
+  
+  /* Ajustes para textos longos */
+  .question-text {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+  
+  /* Botões responsivos - grid layout */
+  .mobile-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .mobile-buttons button {
+    min-height: 44px;
+  }
+  
+  /* Full width buttons on very small screens */
+  .mobile-buttons button.full-width {
+    grid-column: span 2;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  /* Compact mode for landscape */
+  .compact-header {
+    height: 3rem;
+    padding: 0.5rem;
+  }
+  
+  .compact-card {
+    padding: 1rem;
+    margin: 0.5rem;
+  }
+  
+  /* Smaller text and spacing in landscape */
+  .question-content {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  
+  .alternatives-list {
+    gap: 0.5rem;
+  }
+}
+
+/* Tablet improvements */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  
+  /* Two column grid for configs */
+  .practice-config-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop improvements */
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  /* Better spacing for desktop */
+  .question-text {
+    font-size: 1.1rem;
+    line-height: 1.7;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Ensure touch targets are large enough */
+button, input, textarea, select {
+  min-height: 44px;
+}
+
+/* Smaller touch targets for icon-only buttons */
+button.icon-only, button[class*="h-8"] {
+  min-height: 32px;
+}
+
+/* Improve readability on mobile */
+@media (max-width: 640px) {
+  body {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Better mobile typography */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.75rem;
+    line-height: 1.3;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+  
+  p {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+}
+
+/* Skeleton loading animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+@layer components {
+  /* Skeleton loading */
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, 
+      hsl(var(--muted)) 0%, 
+      hsl(var(--muted-foreground) / 0.1) 50%, 
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  /* Tipografia melhorada para textos longos */
+  .rich-text {
+    @apply leading-relaxed;
+  }
+  
+  /* Comentários melhorados - mais legíveis */
+  .comment-content {
+    @apply text-base leading-7 text-foreground/90;
+    @apply bg-muted/30 p-6 rounded-xl border border-border/50;
+    @apply shadow-sm backdrop-blur-sm;
+  }
+  
+  .comment-content p {
+    @apply mb-4 last:mb-0;
+  }
+  
+  .comment-content strong {
+    @apply text-foreground font-semibold;
+  }
+  
+  .comment-content em {
+    @apply text-primary/80 italic;
+  }
+  
+  .comment-content ul, .comment-content ol {
+    @apply my-4 pl-6;
+  }
+  
+  .comment-content li {
+    @apply mb-2;
+  }
+  
+  .rich-text h1, .rich-text h2, .rich-text h3, .rich-text h4, .rich-text h5, .rich-text h6 {
+    @apply font-bold mb-3 mt-4 first:mt-0;
+  }
+  
+  .rich-text h1 {
+    @apply text-2xl;
+  }
+  
+  .rich-text h2 {
+    @apply text-xl;
+  }
+  
+  .rich-text h3 {
+    @apply text-lg;
+  }
+  
+  .rich-text p {
+    @apply mb-3 last:mb-0;
+  }
+  
+  .rich-text strong, .rich-text b {
+    @apply font-bold;
+  }
+  
+  .rich-text em, .rich-text i {
+    @apply italic;
+  }
+  
+  .rich-text ul, .rich-text ol {
+    @apply mb-3 ml-6;
+  }
+  
+  .rich-text ul {
+    @apply list-disc;
+  }
+  
+  .rich-text ol {
+    @apply list-decimal;
+  }
+  
+  .rich-text li {
+    @apply mb-1;
+  }
+  
+  .rich-text blockquote {
+    @apply border-l-4 border-primary/30 pl-4 italic text-muted-foreground mb-3;
+  }
+  
+  .rich-text code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+  
+  .rich-text pre {
+    @apply bg-muted p-4 rounded mb-3 overflow-x-auto;
+  }
+  
+  .rich-text pre code {
+    @apply bg-transparent p-0;
+  }
+  
+  /* Estilos para botões de favoritos */
+  .favorite-btn {
+    @apply transition-all duration-200 hover:scale-110;
+  }
+  
+  .favorite-btn.active {
+    @apply text-yellow-500 drop-shadow-sm;
+  }
+  
+  /* Gradientes aprimorados */
+  .medical-gradient {
+    background: var(--gradient-medical);
+  }
+  
+  .primary-gradient {
+    background: var(--gradient-primary);
+  }
+  
+  .success-gradient {
+    background: var(--gradient-success);
+  }
+  
+  /* Manter apenas transições rápidas para hover e estados */
+  button, a, .card, input, select, textarea {
+    transition: all 0.15s ease !important;
+  }
+}
