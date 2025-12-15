@@ -1,10 +1,5 @@
 import React, { useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-{!navigator.onLine && (
-  <div className="bg-yellow-100 text-yellow-900 text-sm px-4 py-2 text-center">
-    Modo offline: usando dados salvos no dispositivo
-  </div>
-)}
 
 import { AppSidebar } from "@/components/AppSidebar";
 
@@ -287,6 +282,13 @@ const Index = () => {
 
         {/* MAIN AREA */}
         <div className="flex-1 flex flex-col min-w-0">
+
+          {/* OFFLINE BANNER */}
+          {!navigator.onLine && (
+            <div className="bg-yellow-100 text-yellow-900 text-sm px-4 py-2 text-center">
+              Modo offline: usando dados salvos no dispositivo
+            </div>
+          )}
 
           {/* HEADER */}
           <header className="h-14 border-b bg-card sticky top-0 z-40">
