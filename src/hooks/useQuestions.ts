@@ -3,6 +3,23 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Question } from '@/types/question';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from "@tanstack/react-query";
+
+const isOnline = typeof navigator !== "undefined" && navigator.onLine;
+
+const {
+  data: questions = [],
+  isLoading,
+  isFetching,
+  error,
+} = useQuery({
+  queryKey: ["questions"],
+  queryFn: fetchQuestions,
+  enabled: isOnline,          // 🔑 não tenta fetch offline
+  staleTime: Infinity,        // 🔑 nunca invalida cache offline
+  cacheTime: 1000 * 60 * 60 * 24 * 7, // 7 dias
+});
+
 
 export type QuestionFilterType = 'all' | 'new' | 'most_errors' | 'favorites' | 'recent';
 export type SortType = 'newest' | 'oldest' | 'difficulty' | 'category' | 'random';
