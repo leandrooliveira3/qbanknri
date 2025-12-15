@@ -1,23 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Question } from '@/types/question';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { QuestionFilters, QuestionFilterType, SortType } from '@/components/QuestionFilters';
 import { BatchQuestionEditor } from '@/components/BatchQuestionEditor';
-import { MultiImageUpload } from '@/components/MultiImageUpload';
 import { 
   BookOpen, 
   Edit, 
   Trash2, 
-  Eye, 
-  Clock,
   Star,
   Tags,
-  FileText,
   Edit3,
-  Image as ImageIcon,
   Filter,
   MessageSquare,
   ChevronDown,
@@ -36,100 +31,83 @@ interface QuestionBankProps {
   onDelete: (id: string) => void;
 }
 
-export const QuestionBank: React.FC<QuestionBankProps> = ({ 
-  questions, 
-  loading, 
-  hasMore, 
-  onLoadMore, 
-  onEdit, 
-  onDelete 
+export const QuestionBank: React.FC<QuestionBankProps> = ({
+  questions,
+  loading,
+  hasMore,
+  onLoadMore,
+  onEdit,
+  onDelete
 }) => {
   const { toast } = useToast();
-  const { favorites, loading: favoritesLoading, isFavorite, toggleFavorite } = useFavorites();
-  
+  const { isFavorite, toggleFavorite } = useFavorites();
+
   const [activeFilter, setActiveFilter] = useState<QuestionFilterType>('recent');
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [showBatchEditor, setShowBatchEditor] = useState(false);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
 
-  // Filtrar e ordenar questões
+  const getTime = (q: Question) =>
+    q.created_at ? new Date(q.created_at).getTime() : 0;
+
   const filteredAndSortedQuestions = useMemo(() => {
     let filtered = [...questions];
 
-    // Aplicar filtros
     switch (activeFilter) {
-      case 'new':
-        // Questões nunca respondidas (implementar com dados de tentativas futuramente)
-        filtered = filtered.filter(q => !q.isFavorite); // Placeholder
-        break;
-      case 'most_errors':
-        // Questões com mais erros (implementar com estatísticas futuramente)
-        filtered = filtered.filter(q => q.dificuldade === 'Difícil'); // Placeholder
-        break;
       case 'favorites':
         filtered = filtered.filter(q => isFavorite(q.id));
         break;
-      case 'recent':
-        // MODO ECONOMIA: 5 últimas + favoritas (reduz egress)
-        const recent = [...filtered].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5);
+
+      case 'recent': {
+        const recent = [...filtered]
+          .sort((a, b) => getTime(b) - getTime(a))
+          .slice(0, 5);
+
         const favorites = filtered.filter(q => isFavorite(q.id));
-        const economyMap = new Map();
-        [...recent, ...favorites].forEach(q => economyMap.set(q.id, q));
-        filtered = Array.from(economyMap.values());
+        const map = new Map<string, Question>();
+        [...recent, ...favorites].forEach(q => map.set(q.id, q));
+        filtered = Array.from(map.values());
         break;
-      case 'all':
+      }
+
       default:
         break;
     }
 
-    // Aplicar ordenação
     switch (sortBy) {
       case 'oldest':
-        filtered.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        filtered.sort((a, b) => getTime(a) - getTime(b));
         break;
-      case 'difficulty':
-        const difficultyOrder = { 'Fácil': 1, 'Médio': 2, 'Difícil': 3 };
-        filtered.sort((a, b) => difficultyOrder[a.dificuldade] - difficultyOrder[b.dificuldade]);
+
+      case 'difficulty': {
+        const order = { 'Fácil': 1, 'Médio': 2, 'Difícil': 3 };
+        filtered.sort((a, b) => order[a.dificuldade] - order[b.dificuldade]);
         break;
+      }
+
       case 'category':
         filtered.sort((a, b) => a.categoria.localeCompare(b.categoria));
         break;
+
       case 'random':
-        filtered = filtered.sort(() => Math.random() - 0.5);
+        filtered.sort(() => Math.random() - 0.5);
         break;
+
       case 'newest':
       default:
-        filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        filtered.sort((a, b) => getTime(b) - getTime(a));
         break;
     }
 
     return filtered;
   }, [questions, activeFilter, sortBy, isFavorite]);
 
-  const handleBatchUpdate = async (updates: { id: string; data: Partial<Question> }[]) => {
-    try {
-      // Implementar updates em lote
-      for (const update of updates) {
-        await onEdit({ ...questions.find(q => q.id === update.id)!, ...update.data });
-      }
-      setShowBatchEditor(false);
-    } catch (error) {
-      toast({
-        title: "Erro ao atualizar questões",
-        description: "Tente novamente em alguns momentos",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const toggleQuestionExpanded = (questionId: string) => {
-    const newExpanded = new Set(expandedQuestions);
-    if (newExpanded.has(questionId)) {
-      newExpanded.delete(questionId);
-    } else {
-      newExpanded.add(questionId);
-    }
-    setExpandedQuestions(newExpanded);
+  const toggleExpanded = (id: string) => {
+    setExpandedQuestions(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   };
 
   if (loading && questions.length === 0) {
@@ -139,8 +117,8 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
   if (showBatchEditor) {
     return (
       <BatchQuestionEditor
-        questions={questions.slice(0, 10)} // Últimas 10 para edição em lote
-        onUpdate={handleBatchUpdate}
+        questions={questions.slice(0, 10)}
+        onUpdate={async () => setShowBatchEditor(false)}
         onClose={() => setShowBatchEditor(false)}
       />
     );
@@ -148,47 +126,20 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <BookOpen className="h-6 w-6" />
-            Banco de Questões
-          </h2>
-          {activeFilter === 'recent' && (
-            <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-              💚 Modo Economia
-            </Badge>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {activeFilter === 'recent' ? (
-            <Button
-              onClick={() => setActiveFilter('all')}
-              variant="outline"
-              size="sm"
-            >
-              Ver Todas
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setActiveFilter('recent')}
-              variant="outline"
-              size="sm"
-              className="bg-success/10 text-success border-success/20 hover:bg-success/20"
-            >
-              💚 Ativar Modo Economia
-            </Button>
-          )}
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowBatchEditor(true)}
-            className="flex items-center gap-2"
-          >
-            <Edit3 className="h-4 w-4" />
-            Edição em Lote
-          </Button>
-        </div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <BookOpen className="h-6 w-6" />
+          Banco de Questões
+        </h2>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowBatchEditor(true)}
+        >
+          <Edit3 className="h-4 w-4 mr-2" />
+          Edição em lote
+        </Button>
       </div>
 
       <QuestionFilters
@@ -200,191 +151,112 @@ export const QuestionBank: React.FC<QuestionBankProps> = ({
         filteredCount={filteredAndSortedQuestions.length}
       />
 
-      <div className="space-y-4">
-        {filteredAndSortedQuestions.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-8">
-              <Filter className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma questão encontrada</h3>
-              <p className="text-sm text-muted-foreground text-center">
-                Tente ajustar os filtros ou adicione novas questões
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredAndSortedQuestions.map((question) => (
-            <Card key={question.id} className="border-l-4 border-l-primary/20">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{question.categoria}</Badge>
-                    <Badge variant={question.dificuldade === 'Fácil' ? 'default' : question.dificuldade === 'Médio' ? 'secondary' : 'destructive'}>
-                      {question.dificuldade}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
+      {filteredAndSortedQuestions.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <Filter className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Nenhuma questão encontrada</p>
+          </CardContent>
+        </Card>
+      ) : (
+        filteredAndSortedQuestions.map(q => (
+          <Card key={q.id} className="border-l-4 border-l-primary/30">
+            <CardHeader className="flex flex-row justify-between items-center">
+              <div className="flex gap-2">
+                <Badge variant="outline">{q.categoria}</Badge>
+                <Badge>{q.dificuldade}</Badge>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleFavorite(q.id)}
+                className={isFavorite(q.id) ? 'text-yellow-500' : ''}
+              >
+                <Star className={`h-4 w-4 ${isFavorite(q.id) ? 'fill-current' : ''}`} />
+              </Button>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <RichText content={q.enunciado} />
+
+              <div className="space-y-2">
+                {(q.alternativas ?? []).map((alt, i) => {
+                  const letter = String.fromCharCode(65 + i);
+                  const correct = letter === q.gabarito;
+
+                  return (
+                    <div
+                      key={i}
+                      className={`p-3 rounded border ${
+                        correct ? 'bg-success/10 border-success' : ''
+                      }`}
+                    >
+                      <strong>{letter})</strong> <RichText content={alt} />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div>
+                {expandedQuestions.has(q.id) ? (
+                  <>
+                    <div className="bg-muted/40 p-4 rounded">
+                      <MessageSquare className="inline mr-2 h-4 w-4" />
+                      <RichText content={q.comentario} />
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleFavorite(question.id)}
-                      className={isFavorite(question.id) ? 'text-yellow-500' : 'text-muted-foreground'}
+                      onClick={() => toggleExpanded(q.id)}
                     >
-                      <Star className={`h-4 w-4 ${isFavorite(question.id) ? 'fill-current' : ''}`} />
+                      <ChevronUp className="h-4 w-4 mr-2" />
+                      Ocultar comentário
                     </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <RichText content={question.enunciado} />
-                </div>
-
-                {/* Imagens do enunciado - Responsivas */}
-                {question.imagem && question.imagem.length > 0 && (
-                  <div className="my-3 sm:my-4 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                    {question.imagem.map((img, index) => (
-                      <img 
-                        key={index}
-                        src={img} 
-                        alt={`Imagem da questão ${index + 1}`}
-                        className="w-full h-auto max-h-48 sm:max-h-64 md:max-h-80 object-contain rounded-lg border"
-                        loading="lazy"
-                      />
-                    ))}
-                  </div>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleExpanded(q.id)}
+                  >
+                    <ChevronDown className="h-4 w-4 mr-2" />
+                    Ver comentário
+                  </Button>
                 )}
+              </div>
 
-                {/* Alternativas - Aristo Style com círculos */}
-                <div className="space-y-3">
-                  {question.alternativas.map((alt, index) => {
-                    const letter = String.fromCharCode(65 + index);
-                    const isCorrect = letter === question.gabarito;
-                    
-                    return (
-                      <div
-                        key={index}
-                        className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                          isCorrect 
-                            ? 'bg-success/10 border-success' 
-                            : 'bg-card border-border'
-                        }`}
-                      >
-                        {/* Letter Circle - Aristo Style */}
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 text-sm font-bold shrink-0 ${
-                          isCorrect 
-                            ? 'bg-success text-success-foreground border-success' 
-                            : 'bg-primary/10 text-primary border-primary'
-                        }`}>
-                          {letter}
-                        </div>
-                        
-                        <div className="flex-1 text-sm sm:text-base break-words overflow-hidden">
-                          <RichText content={alt} />
-                        </div>
-                        
-                        {isCorrect && (
-                          <Badge variant="default" className="bg-success text-success-foreground shrink-0">
-                            Gabarito
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+              {q.tags?.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {q.tags.map((tag, i) => (
+                    <Badge key={i} variant="outline">
+                      <Tags className="h-3 w-3 mr-1" />
+                      {tag}
+                    </Badge>
+                  ))}
                 </div>
+              )}
 
-                {/* Comentário Colapsável - Responsivo */}
-                <div className="border-t pt-3 sm:pt-4">
-                  {expandedQuestions.has(question.id) ? (
-                    <div className="space-y-3">
-                      <div className="bg-muted/30 p-3 sm:p-4 md:p-5 rounded-lg">
-                        <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm sm:text-base">
-                          <MessageSquare className="h-4 w-4 shrink-0" />
-                          Comentário:
-                        </h4>
-                        <div className="text-sm sm:text-base break-words overflow-hidden">
-                          <RichText content={question.comentario} />
-                        </div>
-                      </div>
-                      
-                      {/* Imagens do comentário - Responsivas */}
-                      {question.comentarioImagem && question.comentarioImagem.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                          {question.comentarioImagem.map((img, index) => (
-                            <img 
-                              key={index}
-                              src={img} 
-                              alt={`Imagem do comentário ${index + 1}`}
-                              className="w-full h-auto max-h-48 sm:max-h-64 md:max-h-80 object-contain rounded-lg border"
-                              loading="lazy"
-                            />
-                          ))}
-                        </div>
-                      )}
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleQuestionExpanded(question.id)}
-                        className="w-full text-xs sm:text-sm"
-                      >
-                        <ChevronUp className="h-4 w-4 mr-2" />
-                        Ocultar Comentário
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleQuestionExpanded(question.id)}
-                      className="w-full text-xs sm:text-sm"
-                    >
-                      <ChevronDown className="h-4 w-4 mr-2" />
-                      Ver Comentário
-                    </Button>
-                  )}
-                </div>
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" variant="outline" onClick={() => onEdit(q)}>
+                  <Edit className="h-4 w-4 mr-1" /> Editar
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => onDelete(q.id)}>
+                  <Trash2 className="h-4 w-4 mr-1" /> Excluir
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      )}
 
-                {/* Tags */}
-                {question.tags && question.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {question.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        <Tags className="h-3 w-3 mr-1" />
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                {/* Ações - Responsivas */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-3 sm:pt-4">
-                  <div className="text-xs sm:text-sm text-muted-foreground break-words max-w-full sm:max-w-[60%]">
-                    {question.fonte && <span>Fonte: {question.fonte}</span>}
-                  </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Button variant="outline" size="sm" onClick={() => onEdit(question)} className="flex-1 sm:flex-none text-xs sm:text-sm">
-                      <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      Editar
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => onDelete(question.id)} className="flex-1 sm:flex-none text-xs sm:text-sm">
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      Excluir
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-
-        {hasMore && (
-          <div className="flex justify-center">
-            <Button onClick={onLoadMore} disabled={loading}>
-              {loading ? 'Carregando...' : 'Carregar Mais'}
-            </Button>
-          </div>
-        )}
-      </div>
+      {hasMore && (
+        <div className="flex justify-center">
+          <Button onClick={onLoadMore} disabled={loading}>
+            {loading ? 'Carregando…' : 'Carregar mais'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
