@@ -9,8 +9,19 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { setupReactQueryPersistence } from "@/lib/reactQueryPersistence";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 1000 * 60 * 10, // 10 minutos
+      cacheTime: 1000 * 60 * 60 * 24 * 7, // 7 dias
+    },
+  },
+});
+
+setupReactQueryPersistence(queryClient);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
