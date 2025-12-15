@@ -13,7 +13,7 @@ import { useStatistics } from '@/hooks/useStatistics';
 import { useFavorites } from '@/hooks/useFavorites';
 import { CommentWithImage } from '@/components/CommentWithImage';
 import { QuestionEditor } from '@/components/QuestionEditor';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { useSidebar } from '@/components/ui/sidebar';
 
 interface PracticeModeProps {
