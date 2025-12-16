@@ -2,6 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Question } from "@/types/question";
 
+const normalizeQuestionForDB = (q: any) => ({
+  categoria: q.categoria,
+  subcategoria: q.subcategoria ?? null,
+  enunciado: q.enunciado,
+  alternativas: Array.isArray(q.alternativas) ? q.alternativas : [],
+  gabarito: q.gabarito,
+  comentario: q.comentario,
+  dificuldade: q.dificuldade,
+  tags: Array.isArray(q.tags) ? q.tags : [],
+  fonte: q.fonte ?? null,
+  imagem: Array.isArray(q.imagem) ? q.imagem : [],
+  comentario_imagem: Array.isArray(q.comentarioImagem)
+    ? q.comentarioImagem
+    : [],
+});
+
+
 /* ================= FETCH ================= */
 
 const fetchQuestions = async (): Promise<Question[]> => {
@@ -32,37 +49,42 @@ export function useQuestions() {
 
   /* ========== ADD SINGLE QUESTION ========== */
 
-  const addQuestion = useMutation({
-    mutationFn: async (question: Omit<Question, "id" | "createdAt">) => {
-      const { error } = await supabase
-        .from("questions")
-        .insert({
-          ...question,
-          created_at: new Date().toISOString(),
-        });
+const addQuestion = useMutation({
+  mutationFn: async (question: any) => {
+    const payload = normalizeQuestionForDB(question);
 
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["questions"] }),
-  });
+    const { data, error } = await supabase
+      .from("questions")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["questions"] });
+  },
+});
+
 
   /* ========== IMPORT QUESTIONS (🔥 O QUE FALTAVA 🔥) ========== */
 
-  const importQuestions = useMutation({
-    mutationFn: async (questions: Omit<Question, "id" | "createdAt">[]) => {
-      const payload = questions.map((q) => ({
-        ...q,
-        created_at: new Date().toISOString(),
-      }));
+const importQuestions = useMutation({
+  mutationFn: async (questions: any[]) => {
+    const payload = questions.map(normalizeQuestionForDB);
 
-      const { error } = await supabase
-        .from("questions")
-        .insert(payload);
+    const { error } = await supabase
+      .from("questions")
+      .insert(payload);
 
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["questions"] }),
-  });
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["questions"] });
+  },
+});
+
 
   /* ========== UPDATE ========== */
 
@@ -106,7 +128,7 @@ export function useQuestions() {
     refetch,
 
     addQuestion: addQuestion.mutateAsync,
-    importQuestions: importQuestions.mutateAsync, // 🔑 ESSENCIAL
+    importQuestions: importQuestions.mutateAsync,
     updateQuestion: updateQuestion.mutateAsync,
     deleteQuestion: deleteQuestion.mutateAsync,
   };
