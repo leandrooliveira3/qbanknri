@@ -9,6 +9,10 @@ import {
   Heart,
   StickyNote,
   Layers,
+  Plus,
+  Upload,
+  GraduationCap,
+  ClipboardList,
   BarChart3,
   Sparkles,
 } from "lucide-react";
@@ -19,6 +23,13 @@ const menuItems = [
   { title: "Favoritas", url: "favorites", icon: Heart },
   { title: "Resumos", url: "summaries", icon: StickyNote },
   { title: "Flashcards", url: "flashcards", icon: Layers },
+
+  // ➕ AGORA INCLUÍDOS
+  { title: "Adicionar", url: "add-question", icon: Plus },
+  { title: "Importar", url: "import", icon: Upload },
+  { title: "Prática", url: "practice-config", icon: GraduationCap },
+  { title: "Simulados", url: "simulados", icon: ClipboardList },
+
   { title: "Estatísticas", url: "statistics", icon: BarChart3 },
   { title: "Análise", url: "detailed-statistics", icon: Sparkles },
 ];
