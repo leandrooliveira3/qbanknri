@@ -47,12 +47,13 @@ export function AppSidebar({
   onTabChange,
   questionsCount,
 }: AppSidebarProps) {
+
   function handleClick(tab: string) {
     onTabChange(tab);
   }
 
   return (
-    <Sidebar collapsible={false} className="border-r h-full w-64">
+    <Sidebar className="border-r h-full w-64">
       <SidebarContent className="bg-sidebar flex flex-col h-full">
 
         {/* HEADER */}
@@ -70,7 +71,7 @@ export function AppSidebar({
                     onClick={() => handleClick(item.url)}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left ${
                       activeTab === item.url
-                        ? "bg-accent text-white"
+                        ? "bg-accent text-accent-foreground"
                         : "hover:bg-muted"
                     }`}
                   >
