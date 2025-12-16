@@ -15,11 +15,12 @@ const fetchQuestions = async (): Promise<Question[]> => {
     throw error;
   }
 
-  return (data ?? []).map((q: any) => ({
+  return (data ?? []).map((q) => ({
     ...q,
     createdAt: q.created_at ? new Date(q.created_at) : new Date(),
   }));
 };
+
 
 /* ================= HOOK ================= */
 
