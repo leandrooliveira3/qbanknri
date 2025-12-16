@@ -19,46 +19,53 @@ const fetchQuestions = async (): Promise<Question[]> => {
 export function useQuestions() {
   const queryClient = useQueryClient();
 
-  const { data: questions = [], isLoading } = useQuery({
+  const {
+    data: questions = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["questions"],
     queryFn: fetchQuestions,
   });
 
-  /* ---------- ADD ---------- */
+  /* ========== ADD SINGLE QUESTION ========== */
+
   const addQuestion = useMutation({
-    mutationFn: async (question: Omit<Question, "id" | "created_at">) => {
-      const { data, error } = await supabase
-        .from("questions")
-        .insert(question)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["questions"] });
-    },
-  });
-
-  /* ---------- IMPORT (🔑 FIX) ---------- */
-  const importQuestions = useMutation({
-    mutationFn: async (
-      questions: Omit<Question, "id" | "created_at">[]
-    ) => {
+    mutationFn: async (question: Omit<Question, "id" | "createdAt">) => {
       const { error } = await supabase
         .from("questions")
-        .insert(questions);
+        .insert({
+          ...question,
+          created_at: new Date().toISOString(),
+        });
 
       if (error) throw error;
-      return true;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["questions"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["questions"] }),
   });
 
-  /* ---------- UPDATE ---------- */
+  /* ========== IMPORT QUESTIONS (🔥 O QUE FALTAVA 🔥) ========== */
+
+  const importQuestions = useMutation({
+    mutationFn: async (questions: Omit<Question, "id" | "createdAt">[]) => {
+      const payload = questions.map((q) => ({
+        ...q,
+        created_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase
+        .from("questions")
+        .insert(payload);
+
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["questions"] }),
+  });
+
+  /* ========== UPDATE ========== */
+
   const updateQuestion = useMutation({
     mutationFn: async ({
       id,
@@ -67,22 +74,18 @@ export function useQuestions() {
       id: string;
       updates: Partial<Question>;
     }) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("questions")
         .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
+        .eq("id", id);
 
       if (error) throw error;
-      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["questions"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["questions"] }),
   });
 
-  /* ---------- DELETE ---------- */
+  /* ========== DELETE ========== */
+
   const deleteQuestion = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -91,19 +94,19 @@ export function useQuestions() {
         .eq("id", id);
 
       if (error) throw error;
-      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["questions"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["questions"] }),
   });
 
   return {
     questions,
     loading: isLoading,
+    isFetching,
+    error,
+    refetch,
 
     addQuestion: addQuestion.mutateAsync,
-    importQuestions: importQuestions.mutateAsync, // 🔥 ESSENCIAL
+    importQuestions: importQuestions.mutateAsync, // 🔑 ESSENCIAL
     updateQuestion: updateQuestion.mutateAsync,
     deleteQuestion: deleteQuestion.mutateAsync,
   };
