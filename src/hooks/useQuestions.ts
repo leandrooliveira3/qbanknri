@@ -10,54 +10,30 @@ const fetchQuestions = async (): Promise<Question[]> => {
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("Erro ao buscar questões:", error);
-    throw error;
-  }
-
-  return (data ?? []).map((q) => ({
-    ...q,
-    createdAt: q.created_at ? new Date(q.created_at) : new Date(),
-  }));
+  if (error) throw error;
+  return data ?? [];
 };
-
 
 /* ================= HOOK ================= */
 
 export function useQuestions() {
   const queryClient = useQueryClient();
 
-  const {
-    data: questions = [],
-    isLoading,
-    isFetching,
-    error,
-  } = useQuery({
+  const { data: questions = [], isLoading } = useQuery({
     queryKey: ["questions"],
     queryFn: fetchQuestions,
-    staleTime: Infinity,
   });
 
-  /* ================= ADD ================= */
-
+  /* ---------- ADD ---------- */
   const addQuestion = useMutation({
-    mutationFn: async (question: Omit<Question, "id" | "createdAt">) => {
-      const payload = {
-        ...question,
-        created_at: new Date().toISOString(),
-      };
-
+    mutationFn: async (question: Omit<Question, "id" | "created_at">) => {
       const { data, error } = await supabase
         .from("questions")
-        .insert(payload)
+        .insert(question)
         .select()
         .single();
 
-      if (error) {
-        console.error("Erro ao adicionar questão:", error);
-        throw error;
-      }
-
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -65,36 +41,24 @@ export function useQuestions() {
     },
   });
 
-  /* ================= IMPORT (🔴 ERRO ORIGINAL ESTAVA AQUI) ================= */
-
+  /* ---------- IMPORT (🔑 FIX) ---------- */
   const importQuestions = useMutation({
     mutationFn: async (
-      questions: Omit<Question, "id" | "createdAt">[]
+      questions: Omit<Question, "id" | "created_at">[]
     ) => {
-      const payload = questions.map(q => ({
-        ...q,
-        created_at: new Date().toISOString(),
-      }));
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("questions")
-        .insert(payload)
-        .select();
+        .insert(questions);
 
-      if (error) {
-        console.error("Erro ao importar questões:", error);
-        throw error;
-      }
-
-      return data;
+      if (error) throw error;
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
     },
   });
 
-  /* ================= UPDATE ================= */
-
+  /* ---------- UPDATE ---------- */
   const updateQuestion = useMutation({
     mutationFn: async ({
       id,
@@ -103,25 +67,22 @@ export function useQuestions() {
       id: string;
       updates: Partial<Question>;
     }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("questions")
         .update(updates)
-        .eq("id", id);
+        .eq("id", id)
+        .select()
+        .single();
 
-      if (error) {
-        console.error("Erro ao atualizar questão:", error);
-        throw error;
-      }
-
-      return id;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
     },
   });
 
-  /* ================= DELETE ================= */
-
+  /* ---------- DELETE ---------- */
   const deleteQuestion = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -129,11 +90,7 @@ export function useQuestions() {
         .delete()
         .eq("id", id);
 
-      if (error) {
-        console.error("Erro ao excluir questão:", error);
-        throw error;
-      }
-
+      if (error) throw error;
       return id;
     },
     onSuccess: () => {
@@ -141,15 +98,12 @@ export function useQuestions() {
     },
   });
 
-  /* ================= RETURN ================= */
-
   return {
     questions,
-    isLoading,
-    isFetching,
-    error,
+    loading: isLoading,
+
     addQuestion: addQuestion.mutateAsync,
-    importQuestions: importQuestions.mutateAsync, // 🔑 ESSENCIAL
+    importQuestions: importQuestions.mutateAsync, // 🔥 ESSENCIAL
     updateQuestion: updateQuestion.mutateAsync,
     deleteQuestion: deleteQuestion.mutateAsync,
   };
