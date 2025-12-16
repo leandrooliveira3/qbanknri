@@ -12,15 +12,23 @@ import { Flashcards } from "@/components/Flashcards";
 import { Statistics } from "@/components/Statistics";
 import { DetailedStatistics } from "@/components/DetailedStatistics";
 import { QuestionForm } from "@/components/QuestionForm";
+import { QuestionEditor } from "@/components/QuestionEditor";
 import { ImportQuestions } from "@/components/ImportQuestions";
+
 import { PracticeConfig } from "@/components/PracticeConfig";
+import { PracticeMode } from "@/components/PracticeMode";
+
 import { SimuladoConfig } from "@/components/SimuladoConfig";
+import { SimuladoMode } from "@/components/SimuladoMode";
 
 import { Button } from "@/components/ui/button";
 import { LogOut, Menu } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
 import { useQuestions } from "@/hooks/useQuestions";
 import { useAuth } from "@/contexts/AuthContext";
+
+import { Question, SimuladoConfig as SimuladoConfigType, SimuladoResult } from "@/types/question";
 
 const Index = () => {
   const {
@@ -38,17 +46,74 @@ const Index = () => {
     refetch,
   } = useQuestions();
 
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [activeTab, setActiveTab] = useState("dashboard");
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  /* ================= CONTENT ================= */
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+
+  const [practiceQuestions, setPracticeQuestions] = useState<Question[]>([]);
+  const [simuladoQuestions, setSimuladoQuestions] = useState<Question[]>([]);
+  const [simuladoConfig, setSimuladoConfig] = useState<SimuladoConfigType | null>(null);
+
+  /* ===================== HANDLERS ===================== */
+
+  const handleAddQuestion = async (data: Omit<Question, "id" | "createdAt">) => {
+    await addQuestion(data);
+    setActiveTab("questions");
+  };
+
+  const handleImport = async (data: Omit<Question, "id" | "createdAt">[]) => {
+    await importQuestions(data);
+    await refetch();
+    setActiveTab("questions");
+  };
+
+  const handleEditQuestion = (question: Question) => {
+    setEditingQuestion(question);
+    setActiveTab("edit-question");
+  };
+
+  const handleUpdateQuestion = async (id: string, data: Partial<Question>) => {
+    await updateQuestion(id, data);
+    setEditingQuestion(null);
+    setActiveTab("questions");
+  };
+
+  const handleStartPractice = (selectedQuestions: Question[]) => {
+    setPracticeQuestions(selectedQuestions);
+    setActiveTab("practice");
+  };
+
+  const handleStartSimulado = (
+    config: SimuladoConfigType,
+    selectedQuestions: Question[]
+  ) => {
+    setSimuladoConfig(config);
+    setSimuladoQuestions(selectedQuestions);
+    setActiveTab("simulado-active");
+  };
+
+  const handleFinishSimulado = (result: SimuladoResult) => {
+    console.log("Simulado finalizado:", result);
+    setActiveTab("simulados");
+  };
+
+  /* ===================== CONTENT ===================== */
 
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard questions={questions} />;
+        return (
+          <Dashboard
+            questions={questions}
+            onStartPractice={() => setActiveTab("practice-config")}
+            onCreateSimulado={() => setActiveTab("simulados")}
+            onAddQuestion={() => setActiveTab("add-question")}
+            onImportQuestions={() => setActiveTab("import")}
+          />
+        );
 
       case "questions":
         return (
@@ -57,7 +122,7 @@ const Index = () => {
             loading={loading}
             hasMore={hasMore}
             onLoadMore={loadMore}
-            onEdit={() => {}}
+            onEdit={handleEditQuestion}
             onDelete={deleteQuestion}
           />
         );
@@ -74,15 +139,27 @@ const Index = () => {
       case "add-question":
         return (
           <QuestionForm
-            onAddQuestion={addQuestion}
+            onAddQuestion={handleAddQuestion}
             onCancel={() => setActiveTab("questions")}
           />
         );
 
+      case "edit-question":
+        return editingQuestion ? (
+          <QuestionEditor
+            question={editingQuestion}
+            onUpdateQuestion={handleUpdateQuestion}
+            onCancel={() => {
+              setEditingQuestion(null);
+              setActiveTab("questions");
+            }}
+          />
+        ) : null;
+
       case "import":
         return (
           <ImportQuestions
-            onImportQuestions={importQuestions}
+            onImportQuestions={handleImport}
             onCancel={() => setActiveTab("dashboard")}
           />
         );
@@ -95,8 +172,17 @@ const Index = () => {
             loadQuestionsByCategory={loadQuestionsByCategory}
             getAllCategories={getAllCategories}
             getAllCategoriesWithCounts={getAllCategoriesWithCounts}
-            onStartPractice={() => {}}
+            onStartPractice={handleStartPractice}
             onBack={() => setActiveTab("dashboard")}
+          />
+        );
+
+      case "practice":
+        return (
+          <PracticeMode
+            questions={practiceQuestions}
+            onBack={() => setActiveTab("practice-config")}
+            onUpdateQuestion={updateQuestion}
           />
         );
 
@@ -106,10 +192,20 @@ const Index = () => {
             questions={questions}
             loading={loading}
             loadQuestionsByCategory={loadQuestionsByCategory}
-            onStartSimulado={() => {}}
+            onStartSimulado={handleStartSimulado}
             onBack={() => setActiveTab("dashboard")}
           />
         );
+
+      case "simulado-active":
+        return simuladoConfig ? (
+          <SimuladoMode
+            questions={simuladoQuestions}
+            config={simuladoConfig}
+            onFinish={handleFinishSimulado}
+            onBack={() => setActiveTab("simulados")}
+          />
+        ) : null;
 
       case "statistics":
         return <Statistics />;
@@ -118,15 +214,11 @@ const Index = () => {
         return <DetailedStatistics />;
 
       default:
-        return (
-          <div className="text-muted-foreground">
-            Aba não encontrada: {activeTab}
-          </div>
-        );
+        return null;
     }
   };
 
-  /* ================= LAYOUT ================= */
+  /* ===================== LAYOUT ===================== */
 
   return (
     <SidebarProvider>
@@ -138,6 +230,7 @@ const Index = () => {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             questionsCount={questions.length}
+            userEmail={user?.email}
           />
         </div>
 
@@ -156,10 +249,8 @@ const Index = () => {
         {/* MAIN */}
         <div className="flex-1 flex flex-col min-w-0">
 
-          {/* HEADER */}
           <header className="h-14 border-b bg-card sticky top-0 z-40">
             <div className="flex items-center h-full px-4 gap-3">
-
               <button
                 className="md:hidden"
                 onClick={() => setMobileOpen(true)}
@@ -177,11 +268,9 @@ const Index = () => {
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>
-
             </div>
           </header>
 
-          {/* CONTENT */}
           <main className="flex-1 overflow-auto bg-muted/30">
             <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
               {renderContent()}
