@@ -15,7 +15,10 @@ const fetchQuestions = async (): Promise<Question[]> => {
     throw error;
   }
 
-  return data ?? [];
+  return (data ?? []).map((q: any) => ({
+    ...q,
+    createdAt: q.created_at ? new Date(q.created_at) : new Date(),
+  }));
 };
 
 /* ================= HOOK ================= */
@@ -28,85 +31,125 @@ export function useQuestions() {
     isLoading,
     isFetching,
     error,
-    refetch,
   } = useQuery({
     queryKey: ["questions"],
     queryFn: fetchQuestions,
     staleTime: Infinity,
   });
 
-  /* ================= MUTATIONS ================= */
+  /* ================= ADD ================= */
 
-  const addQuestion = async (
-    question: Omit<Question, "id" | "createdAt">
-  ) => {
-    const { error } = await supabase.from("questions").insert(question);
-    if (error) throw error;
-    await refetch();
-  };
+  const addQuestion = useMutation({
+    mutationFn: async (question: Omit<Question, "id" | "createdAt">) => {
+      const payload = {
+        ...question,
+        created_at: new Date().toISOString(),
+      };
 
-  const importQuestions = async (
-    questions: Omit<Question, "id" | "createdAt">[]
-  ) => {
-    if (questions.length === 0) return;
+      const { data, error } = await supabase
+        .from("questions")
+        .insert(payload)
+        .select()
+        .single();
 
-    const { error } = await supabase
-      .from("questions")
-      .insert(questions);
+      if (error) {
+        console.error("Erro ao adicionar questão:", error);
+        throw error;
+      }
 
-    if (error) throw error;
-    await refetch();
-  };
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+    },
+  });
 
-  const updateQuestion = async (
-    id: string,
-    updates: Partial<Question>
-  ) => {
-    const { error } = await supabase
-      .from("questions")
-      .update(updates)
-      .eq("id", id);
+  /* ================= IMPORT (🔴 ERRO ORIGINAL ESTAVA AQUI) ================= */
 
-    if (error) throw error;
-    await refetch();
-  };
+  const importQuestions = useMutation({
+    mutationFn: async (
+      questions: Omit<Question, "id" | "createdAt">[]
+    ) => {
+      const payload = questions.map(q => ({
+        ...q,
+        created_at: new Date().toISOString(),
+      }));
 
-  const deleteQuestion = async (id: string) => {
-    const { error } = await supabase
-      .from("questions")
-      .delete()
-      .eq("id", id);
+      const { data, error } = await supabase
+        .from("questions")
+        .insert(payload)
+        .select();
 
-    if (error) throw error;
-    await refetch();
-  };
+      if (error) {
+        console.error("Erro ao importar questões:", error);
+        throw error;
+      }
 
-  /* ================= FALLBACKS (OPÇÃO A) ================= */
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+    },
+  });
+
+  /* ================= UPDATE ================= */
+
+  const updateQuestion = useMutation({
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: Partial<Question>;
+    }) => {
+      const { error } = await supabase
+        .from("questions")
+        .update(updates)
+        .eq("id", id);
+
+      if (error) {
+        console.error("Erro ao atualizar questão:", error);
+        throw error;
+      }
+
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+    },
+  });
+
+  /* ================= DELETE ================= */
+
+  const deleteQuestion = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("questions")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("Erro ao excluir questão:", error);
+        throw error;
+      }
+
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+    },
+  });
+
+  /* ================= RETURN ================= */
 
   return {
     questions,
-    loading: isLoading || isFetching,
+    isLoading,
+    isFetching,
     error,
-
-    // CRUD
-    addQuestion,
-    importQuestions,
-    updateQuestion,
-    deleteQuestion,
-    refetch,
-
-    // Fallbacks seguros (não quebram nada)
-    hasMore: false,
-    loadMore: async () => {},
-    loadQuestionsByCategory: async () => [],
-    getAllCategories: () =>
-      Array.from(new Set(questions.map(q => q.categoria))),
-    getAllCategoriesWithCounts: () =>
-      Array.from(
-        questions.reduce((map, q) => {
-          map.set(q.categoria, (map.get(q.categoria) || 0) + 1);
-          return map;
-        }, new Map<string, number>())
-      ).map(([categoria, count]) => ({ categoria, count })),
+    addQuestion: addQuestion.mutateAsync,
+    importQuestions: importQuestions.mutateAsync, // 🔑 ESSENCIAL
+    updateQuestion: updateQuestion.mutateAsync,
+    deleteQuestion: deleteQuestion.mutateAsync,
   };
 }
