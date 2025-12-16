@@ -9,6 +9,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+
 import {
   Home,
   FileText,
@@ -25,8 +26,16 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+
 import { useTheme } from "next-themes";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+/* ================= MENU ================= */
 
 const menuItems = [
   { title: "Agenda", url: "dashboard", icon: Home },
@@ -42,37 +51,51 @@ const menuItems = [
   { title: "Análise", url: "detailed-statistics", icon: Sparkles },
 ];
 
+/* ================= TYPES ================= */
+
 interface AppSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   questionsCount: number;
 }
 
+/* ================= COMPONENT ================= */
+
 export function AppSidebar({
   activeTab,
   onTabChange,
   questionsCount,
 }: AppSidebarProps) {
-  const { state, setOpen } = useSidebar();
+  const { state, setOpen, isMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
 
   const isCollapsed = state === "collapsed";
-  const isMobile = window.innerWidth < 768;
+
+  function handleTabChange(tab: string) {
+    onTabChange(tab);
+
+    // ✅ FECHA APENAS NO MOBILE
+    if (isMobile) {
+      setOpen(false);
+    }
+  }
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r">
       <SidebarContent className="bg-sidebar flex flex-col">
-        {/* HEADER */}
+
+        {/* ===== HEADER ===== */}
         <div className="p-4 flex items-center gap-3">
           <SidebarTrigger className="p-2 rounded-lg hover:bg-sidebar-accent">
             <Brain className="h-6 w-6" />
           </SidebarTrigger>
+
           {!isCollapsed && (
             <span className="text-lg font-bold">NeuroQBank</span>
           )}
         </div>
 
-        {/* MENU */}
+        {/* ===== MENU ===== */}
         <SidebarGroup className="flex-1 px-2 py-2">
           <SidebarGroupContent>
             <SidebarMenu>
@@ -82,14 +105,7 @@ export function AppSidebar({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <SidebarMenuButton
-                          onClick={() => {
-                            onTabChange(item.url);
-
-                            // 🔴 FECHA SEMPRE NO MOBILE / PWA / TWA
-                            if (isMobile) {
-                              setOpen(false);
-                            }
-                          }}
+                          onClick={() => handleTabChange(item.url)}
                           className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
                             activeTab === item.url
                               ? "bg-sidebar-primary text-sidebar-primary-foreground"
@@ -97,6 +113,7 @@ export function AppSidebar({
                           }`}
                         >
                           <item.icon className="h-5 w-5" />
+
                           {!isCollapsed && (
                             <span className="truncate">
                               {item.title}
@@ -120,7 +137,7 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* FOOTER */}
+        {/* ===== FOOTER ===== */}
         <div className="p-4 border-t">
           <button
             onClick={() =>
@@ -136,6 +153,7 @@ export function AppSidebar({
             {!isCollapsed && "Tema"}
           </button>
         </div>
+
       </SidebarContent>
     </Sidebar>
   );
