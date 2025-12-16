@@ -33,6 +33,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+/* ================= MENU ================= */
+
 const menuItems = [
   { title: "Agenda", url: "dashboard", icon: Home },
   { title: "Questões", url: "questions", icon: FileText },
@@ -58,25 +60,33 @@ export function AppSidebar({
   onTabChange,
   questionsCount,
 }: AppSidebarProps) {
+
   const { state, setOpen, isMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
 
   const isCollapsed = state === "collapsed";
 
+  /**
+   * 🔑 REGRA DE OURO:
+   * 1. Fecha o sidebar
+   * 2. DEPOIS troca a aba
+   */
   function handleTabChange(tab: string) {
-    onTabChange(tab);
-
-    // ✅ AGORA FECHA DE VERDADE NO MOBILE
     if (isMobile) {
       setOpen(false);
     }
+
+    // evita bug de offcanvas "meio aberto"
+    requestAnimationFrame(() => {
+      onTabChange(tab);
+    });
   }
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r">
       <SidebarContent className="bg-sidebar flex flex-col">
 
-        {/* HEADER (SEM TRIGGER!) */}
+        {/* HEADER (SEM TRIGGER) */}
         <div className="p-4">
           {!isCollapsed && (
             <span className="text-lg font-bold">NeuroQBank</span>
@@ -132,11 +142,7 @@ export function AppSidebar({
             }
             className="flex items-center gap-2 text-sm opacity-70 hover:opacity-100"
           >
-            {theme === "dark" ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             {!isCollapsed && "Tema"}
           </button>
         </div>
